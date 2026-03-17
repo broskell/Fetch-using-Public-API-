@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Country Selector</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        select { padding: 10px; width: 300px; margin-bottom: 20px; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        th { background: #eee; }
+        #displayArea { display: none; }
+    </style>
+</head>
+<body>
+
+    <select id="countryDropdown">
+        <option value="">Fetching countries...</option>
+    </select>
+
+    <div id="displayArea">
+        <table>
+            <thead>
+                <tr>
+                    <th>Official Name</th>
+                    <th>Capital</th>
+                    <th>Currencies</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const dropdown = document.getElementById('countryDropdown');
+        const displayArea = document.getElementById('displayArea');
+        const dataTable = document.getElementById('dataTable');
+        let countries = [];
+
+        async function init() {
+            try {
+                const res = await fetch('https://restcountries.com/v3.1/all?fields=name,capital,currencies');
+                const data = await res.json();
+                
+                countries = data.sort((a, b) => a.name.common.localeCompare(b.name.common));
+                
+                dropdown.innerHTML = '<option value="">Choose a country</option>';
+                countries.forEach((c, i) => {
+                    const el = document.createElement('option');
+                    el.value = i;
+                    el.textContent = c.name.common;
+                    dropdown.appendChild(el);
+                });
+            } catch (err) {
+                dropdown.innerHTML = '<option>Error loading data</option>';
+            }
+        }
+
+        dropdown.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (!val) {
+                displayArea.style.display = 'none';
+                return;
+            }
+
+            const item = countries[val];
+            const currencyStr = item.currencies 
+                ? Object.values(item.currencies).map(curr => `${curr.name} (${curr.symbol})`).join(', ') 
+                : 'N/A';
+
+            dataTable.innerHTML = `
+                <tr>
+                    <td>${item.name.official}</td>
+                    <td>${item.capital ? item.capital[0] : 'N/A'}</td>
+                    <td>${currencyStr}</td>
+                </tr>
+            `;
+            displayArea.style.display = 'block';
+        });
+
+        init();
+    </script>
+</body>
+</html>
