@@ -1,148 +1,205 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>Global Explorer</title>
+    <title>Global Explorer - All Data</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 30px; background-color: #f4f7f9; }
-        .control-panel { display: flex; gap: 20px; margin-bottom: 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .field { display: flex; flex-direction: column; gap: 8px; }
-        label { font-weight: bold; color: #4a5568; }
-        select { padding: 12px; width: 250px; border-radius: 6px; border: 1px solid #cbd5e0; font-size: 15px; cursor: pointer; }
-        select:disabled { background-color: #edf2f7; cursor: not-allowed; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #edf2f7; }
-        th { background-color: #2d3748; color: white; text-transform: uppercase; font-size: 12px; }
-        tr:hover { background-color: #f8fafc; }
-        .no-data { text-align: center; padding: 40px; color: #718096; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 30px;
+            background-color: #f4f7f9;
+        }
+
+        .control-panel {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            top: 10px;
+            z-index: 100;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: bold;
+            color: #4a5568;
+        }
+
+        select {
+            padding: 12px;
+            width: 250px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e0;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        th {
+            background-color: #2d3748;
+            color: white;
+            position: sticky;
+            top: 100px;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .stats {
+            margin-bottom: 10px;
+            color: #718096;
+            font-weight: bold;
+        }
     </style>
 </head>
+
 <body>
 
     <div class="control-panel">
         <div class="field">
             <label>Continent</label>
             <select id="continentSelect">
-                <option value="">Loading...</option>
+                <option value="">All Continents</option>
             </select>
         </div>
 
         <div class="field">
             <label>Sub-Region</label>
-            <select id="subRegionSelect" disabled>
-                <option value="">Select Continent First</option>
+            <select id="subRegionSelect">
+                <option value="">All Sub-Regions</option>
             </select>
         </div>
     </div>
 
-    <table id="resultsTable" style="display:none;">
+    <div class="stats" id="countryCount">Loading data...</div>
+
+    <table>
         <thead>
             <tr>
-                <th>Common Name</th>
+                <th>Country</th>
                 <th>Capital</th>
+                <th>Continent</th>
                 <th>Sub-Region</th>
-                <th>Currencies</th>
             </tr>
         </thead>
         <tbody id="tableBody"></tbody>
     </table>
 
-    <div id="placeholder" class="no-data">Please select a continent and sub-region.</div>
-
     <script>
         const continentSelect = document.getElementById('continentSelect');
         const subRegionSelect = document.getElementById('subRegionSelect');
-        const resultsTable = document.getElementById('resultsTable');
         const tableBody = document.getElementById('tableBody');
-        const placeholder = document.getElementById('placeholder');
-        
+        const countryCount = document.getElementById('countryCount');
+
         let allCountries = [];
 
         async function init() {
             try {
-                const res = await fetch('https://restcountries.com/v3.1/all?fields=name,capital,currencies,continents,subregion');
+                const res = await fetch('https://restcountries.com/v3.1/all?fields=name,capital,continents,subregion');
+
+                if (!res.ok) {
+                    throw new Error(`Store is grumpy! Status: ${res.status}`);
+                }
+
                 allCountries = await res.json();
-                
-                const continentSet = new Set();
-                allCountries.forEach(c => {
-                    if(c.continents) c.continents.forEach(cont => continentSet.add(cont));
-                });
-                
-                const sortedContinents = Array.from(continentSet).sort();
-                continentSelect.innerHTML = '<option value="">-- Choose Continent --</option>';
-                sortedContinents.forEach(cont => {
+                allCountries.sort((a, b) => a.name.common.localeCompare(b.name.common));
+
+                const continents = [...new Set(allCountries.flatMap(c => c.continents))].sort();
+                continentSelect.innerHTML = '<option value="">All Continents</option>';
+                continents.forEach(cont => {
                     const opt = document.createElement('option');
                     opt.value = cont;
                     opt.textContent = cont;
                     continentSelect.appendChild(opt);
                 });
+
+                renderTable(allCountries);
             } catch (err) {
-                continentSelect.innerHTML = '<option>Error loading</option>';
+                console.error(err);
+                countryCount.style.color = "red";
+                countryCount.textContent = "Error: " + err.message;
             }
         }
 
-        continentSelect.addEventListener('change', (e) => {
-            const selectedCont = e.target.value;
-            subRegionSelect.innerHTML = '<option value="">-- Choose Sub-Region --</option>';
-            resultsTable.style.display = 'none';
-            placeholder.style.display = 'block';
+        function renderTable(data) {
+            countryCount.textContent = `Showing ${data.length} countries`;
+            tableBody.innerHTML = data.map(c => `
+                <tr>
+                    <td><strong>${c.name.common}</strong></td>
+                    <td>${c.capital ? c.capital[0] : 'N/A'}</td>
+                    <td>${c.continents.join(', ')}</td>
+                    <td>${c.subregion || 'N/A'}</td>
+                </tr>
+            `).join('');
+        }
 
-            if (!selectedCont) {
-                subRegionSelect.disabled = true;
-                return;
-            }
+        function updateFilters() {
+            const selCont = continentSelect.value;
+            const selSub = subRegionSelect.value;
+
+            const filtered = allCountries.filter(c => {
+                const matchCont = !selCont || c.continents.includes(selCont);
+                const matchSub = !selSub || c.subregion === selSub;
+                return matchCont && matchSub;
+            });
+
+            renderTable(filtered);
+        }
+
+        continentSelect.addEventListener('change', () => {
+            const selCont = continentSelect.value;
 
             const subRegions = new Set();
             allCountries.forEach(c => {
-                if(c.continents && c.continents.includes(selectedCont) && c.subregion) {
+                if ((!selCont || c.continents.includes(selCont)) && c.subregion) {
                     subRegions.add(c.subregion);
                 }
             });
 
-            const sortedSubs = Array.from(subRegions).sort();
-            sortedSubs.forEach(sub => {
+            const currentSub = subRegionSelect.value;
+            subRegionSelect.innerHTML = '<option value="">All Sub-Regions</option>';
+            Array.from(subRegions).sort().forEach(sub => {
                 const opt = document.createElement('option');
                 opt.value = sub;
                 opt.textContent = sub;
                 subRegionSelect.appendChild(opt);
             });
 
-            subRegionSelect.disabled = false;
-        });
-
-        subRegionSelect.addEventListener('change', (e) => {
-            const selectedSub = e.target.value;
-            
-            if (!selectedSub) {
-                resultsTable.style.display = 'none';
-                placeholder.style.display = 'block';
-                return;
+            if (Array.from(subRegions).includes(currentSub)) {
+                subRegionSelect.value = currentSub;
             }
 
-            const filtered = allCountries
-                .filter(c => c.subregion === selectedSub)
-                .sort((a, b) => a.name.common.localeCompare(b.name.common));
-
-            tableBody.innerHTML = filtered.map(country => {
-                const currs = country.currencies 
-                    ? Object.values(country.currencies).map(curr => `${curr.name} (${curr.symbol})`).join(', ')
-                    : 'N/A';
-                    
-                return `
-                    <tr>
-                        <td><strong>${country.name.common}</strong></td>
-                        <td>${country.capital ? country.capital[0] : 'N/A'}</td>
-                        <td>${country.subregion}</td>
-                        <td>${currs}</td>
-                    </tr>
-                `;
-            }).join('');
-
-            placeholder.style.display = 'none';
-            resultsTable.style.display = 'table';
+            updateFilters();
         });
+
+        subRegionSelect.addEventListener('change', updateFilters);
 
         init();
     </script>
 </body>
+
 </html>
