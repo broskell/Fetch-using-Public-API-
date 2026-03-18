@@ -2,20 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Country Selector</title>
+    <title>Country & Continent Selector</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        select { padding: 10px; width: 300px; margin-bottom: 20px; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-        th { background: #eee; }
+        body { font-family: sans-serif; padding: 20px; background-color: #f9f9f9; }
+        select { padding: 10px; width: 300px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #aaa; }
+        table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #333; color: white; }
         #displayArea { display: none; }
     </style>
 </head>
 <body>
 
     <select id="countryDropdown">
-        <option value="">Fetching countries...</option>
+        <option value="">Fetching data...</option>
     </select>
 
     <div id="displayArea">
@@ -23,6 +23,8 @@
             <thead>
                 <tr>
                     <th>Official Name</th>
+                    <th>Continent</th>
+                    <th>Region</th>
                     <th>Capital</th>
                     <th>Currencies</th>
                 </tr>
@@ -39,7 +41,7 @@
 
         async function init() {
             try {
-                const res = await fetch('https://restcountries.com/v3.1/all?fields=name,capital,currencies');
+                const res = await fetch('https://restcountries.com/v3.1/all?fields=name,capital,currencies,continents,region');
                 const data = await res.json();
                 
                 countries = data.sort((a, b) => a.name.common.localeCompare(b.name.common));
@@ -71,6 +73,8 @@
             dataTable.innerHTML = `
                 <tr>
                     <td>${item.name.official}</td>
+                    <td>${item.continents ? item.continents.join(', ') : 'N/A'}</td>
+                    <td>${item.region || 'N/A'}</td>
                     <td>${item.capital ? item.capital[0] : 'N/A'}</td>
                     <td>${currencyStr}</td>
                 </tr>
